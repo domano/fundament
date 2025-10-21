@@ -33,7 +33,7 @@ defer session.Close()
 ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 defer cancel()
 
-resp, err := session.Respond(ctx, "Explain what Foundation Models are on macOS.")
+resp, err := session.Respond(ctx, "Explain what a markov chain is.")
 if err != nil {
     log.Fatal(err)
 }
