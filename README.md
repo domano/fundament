@@ -43,46 +43,126 @@ fmt.Println(resp.Text)
 
 Before you start a session, call `fundament.CheckAvailability()` to ensure the on-device model is ready. The helper returns detailed reasons (device not eligible, Apple Intelligence disabled, model still downloading, etc.) so your app can degrade gracefully.
 
-## Examples
+## Use in Your Project
 
-The `examples/` directory contains small programs you can adapt for your own projects.
-
-### 1. Simple: single-turn response
-
-`examples/simple/main.go` shows the minimal flow: check availability, create a session with instructions, prompt once, and print the answer.
-
-Run it after `make swift`:
-
-```bash
-go run ./examples/simple
-```
-
-### 2. Structured: schema-guided output
-
-`examples/structured/main.go` passes a JSON schema built with `fundament.SchemaFromRawJSON`. The schema describes the shape of the response, letting you request strongly typed content (e.g. a travel plan with specific fields). The Swift shim converts that JSON into a `DynamicGenerationSchema` before calling `LanguageModelSession.respond`.
-
-Adapt the `schemaDefinition` map to your own structure; the current translator supports objects, arrays (with min/max counts), string enumerations, and string/int/bool primitives.
-
-### 3. Streaming: incremental completions
-
-`examples/streaming/main.go` demonstrates live updates via `Session.RespondStream`. The Go API returns a channel of `StreamChunk` values; each chunk contains text and a flag indicating whether it’s the final piece. This example prints a limerick word by word.
-
-### 4. Web chat: server-rendered UI
-
-`examples/webchat` starts a minimal HTTP server that renders a chat experience with Go’s `html/template`. Post a prompt from the browser and the handler keeps the conversation history on the server, forwarding each turn to a shared `fundament.Session`.
-
-## Using Fundament in your project
-
-Add the module to your `go.mod` and ensure the Swift shim is built:
+Pull the module into your app, then build the Swift shim so the cgo bindings can link against it:
 
 ```bash
 go get github.com/domano/fundament
 make swift  # run inside the module checkout (or vendor the shim artefact)
 ```
 
-At runtime, the Go package expects `libFundamentShim.dylib` to be discoverable via `DYLD_LIBRARY_PATH` or the embedded `rpath`. For deployment, ship the dylib alongside your binary.
+At runtime the Go binary must be able to locate `libFundamentShim.dylib`. Running inside the repo works out of the box thanks to the embedded `rpath`. If you ship the binary elsewhere, bundle the dylib alongside it or export `DYLD_LIBRARY_PATH=swift/FundamentShim/.build/Release` before launch.
 
-### Key APIs
+## Examples
+
+The `examples/` directory contains small programs you can adapt for your own projects.
+
+### 1. Simple — single turn
+
+Minimal prompt/response with a shared `Session`:
+
+```go
+availability, err := fundament.CheckAvailability()
+// ...
+session, err := fundament.NewSession(fundament.SessionOptions{
+	Instructions: "You are a concise assistant that answers in one sentence.",
+})
+defer session.Close()
+
+ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+defer cancel()
+
+response, err := session.Respond(ctx, "Explain what a markov chain is.")
+fmt.Println("Assistant:", response.Text)
+```
+
+```bash
+go run ./examples/simple
+```
+
+### 2. Structured — schema-guided output
+
+Build a JSON schema on the fly and request strongly typed data:
+
+```go
+schemaDefinition := map[string]any{
+	"name": "TravelPlan",
+	"properties": []map[string]any{
+		{
+			"name": "destination",
+			"schema": map[string]any{
+				"type": "string",
+			},
+		},
+		// ...
+	},
+}
+schemaBytes, _ := json.Marshal(schemaDefinition)
+schema, _ := fundament.SchemaFromRawJSON(schemaBytes)
+
+res, err := session.RespondStructured(ctx, "Plan a 2-day trip to Kyoto in autumn", schema)
+fmt.Println(string(res.JSON))
+```
+
+```bash
+go run ./examples/structured
+```
+
+### 3. Streaming — incremental completions
+
+Stream text chunks as they arrive:
+
+```go
+stream, err := session.RespondStream(
+	ctx,
+	"Write a limerick about coding Go bindings for Swift models.",
+	fundament.WithTemperature(0.7),
+)
+
+for chunk := range stream {
+	if chunk.Err != nil {
+		log.Fatal(chunk.Err)
+	}
+	fmt.Print(chunk.Text, " ")
+	if chunk.Final {
+		fmt.Println("\n-- end --")
+	}
+}
+```
+
+```bash
+go run ./examples/streaming
+```
+
+### 4. Web chat — server-rendered UI
+
+Server-side conversation loop with Go templates:
+
+```go
+func (s *chatServer) handleChat(w http.ResponseWriter, r *http.Request) {
+	// ...
+	prompt := s.appendUserAndPrompt(strings.TrimSpace(r.FormValue("message")))
+
+	ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
+	defer cancel()
+
+	resp, err := s.session.Respond(ctx, prompt)
+	if err != nil {
+		s.appendSystemMessage(fmt.Sprintf("Response error: %v", err))
+	} else {
+		s.appendAssistantMessage(resp.Text)
+	}
+	// ...
+}
+```
+
+```bash
+go run ./examples/webchat
+# Then open http://localhost:8080 in your browser.
+```
+
+## Key APIs
 
 - `fundament.NewSession(opts SessionOptions)` — creates a session bound to the default system language model.
 - `(*Session).Respond(ctx, prompt, opts...)` — single prompt/response.
