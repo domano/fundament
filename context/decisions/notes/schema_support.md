@@ -1,9 +1,5 @@
 # Schema Translation Strategy
 
-**Date:** 2024-XX-XX  
-**Status:** Active  
-**Owner:** Fundamentals team
-
 ## Summary
 
 Structured generation relies on passing a JSON description of a `DynamicGenerationSchema` from Go into Swift. Because Swift cannot decode arbitrary JSON into `DynamicGenerationSchema` directly, we implemented a lightweight translator (`SchemaNode` → `DynamicGenerationSchema`) that covers common patterns.

@@ -1,9 +1,5 @@
 # Availability Enforcement
 
-**Date:** 2024-XX-XX  
-**Status:** Active  
-**Owner:** Fundamentals team
-
 ## Summary
 
 The Swift shim is compiled and executed against `SystemLanguageModel` APIs that Apple ships with macOS 26. Running on earlier versions would crash or produce linker failures because the `FoundationModels` framework is absent.
