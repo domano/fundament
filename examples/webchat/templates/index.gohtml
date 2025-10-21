@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fundament Web Chat</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            background: linear-gradient(135deg, #f0f4ff, #ffffff);
+            min-height: 100vh;
+        }
+        main {
+            width: min(720px, 100%);
+            padding: 2rem;
+        }
+        h1 {
+            margin-top: 0;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+        .chat-window {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 16px;
+            box-shadow: 0 16px 40px rgba(15, 37, 98, 0.18);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-height: 420px;
+        }
+        .message {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            border-radius: 12px;
+            padding: 1rem;
+            background: rgba(240, 244, 255, 0.6);
+            border: 1px solid rgba(47, 83, 151, 0.1);
+        }
+        .message span {
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .message--assistant {
+            background: rgba(64, 99, 169, 0.12);
+        }
+        .message--user {
+            background: rgba(226, 240, 255, 0.75);
+            align-self: flex-end;
+        }
+        .message--system {
+            background: rgba(171, 62, 35, 0.12);
+            border: 1px solid rgba(171, 62, 35, 0.25);
+        }
+        form {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(80, 80, 120, 0.2);
+            font-size: 1rem;
+        }
+        button {
+            align-self: flex-end;
+            padding: 0.6rem 1.8rem;
+            border-radius: 999px;
+            border: none;
+            background: #2f5397;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1f3c72;
+        }
+        .actions {
+            margin-top: 0.75rem;
+            text-align: right;
+        }
+        .actions a {
+            color: #2f5397;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .actions a:hover {
+            text-decoration: underline;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(47, 83, 151, 0.7);
+        }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Fundament Web Chat</h1>
+    <section class="chat-window">
+        {{if .History}}
+            {{range .History}}
+                <article class="message {{if eq .Role "assistant"}}message--assistant{{else if eq .Role "system"}}message--system{{else}}message--user{{end}}">
+                    <span>
+                        {{if eq .Role "assistant"}}Assistant{{else if eq .Role "system"}}System{{else}}You{{end}}
+                    </span>
+                    <p>{{.Content}}</p>
+                </article>
+            {{end}}
+        {{else}}
+            <div class="empty-state">
+                <p>Ask something to start the conversation.</p>
+            </div>
+        {{end}}
+    </section>
+    <form method="post">
+        <label for="message">Your message</label>
+        <textarea id="message" name="message" placeholder="Type a question about your app, platform, or anything else..." required></textarea>
+        <button type="submit">Send</button>
+    </form>
+    <div class="actions">
+        <a href="?reset=1">Reset conversation</a>
+    </div>
+</main>
+</body>
+</html>

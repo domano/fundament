@@ -67,6 +67,10 @@ Adapt the `schemaDefinition` map to your own structure; the current translator s
 
 `examples/streaming/main.go` demonstrates live updates via `Session.RespondStream`. The Go API returns a channel of `StreamChunk` values; each chunk contains text and a flag indicating whether it’s the final piece. This example prints a limerick word by word.
 
+### 4. Web chat: server-rendered UI
+
+`examples/webchat` starts a minimal HTTP server that renders a chat experience with Go’s `html/template`. Post a prompt from the browser and the handler keeps the conversation history on the server, forwarding each turn to a shared `fundament.Session`.
+
 ## Using Fundament in your project
 
 Add the module to your `go.mod` and ensure the Swift shim is built:

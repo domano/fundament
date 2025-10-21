@@ -29,7 +29,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	response, err := session.Respond(ctx, "Explain what Foundation Models are on macOS.")
+	response, err := session.Respond(ctx, "Explain what a markov chain is.")
 	if err != nil {
 		log.Fatalf("respond: %v", err)
 	}
