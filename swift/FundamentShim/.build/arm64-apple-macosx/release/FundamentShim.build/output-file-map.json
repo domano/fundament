@@ -1,0 +1,13 @@
+{
+  "": {
+    "dependencies": "/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/FundamentShim.d",
+    "object": "/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/FundamentShim.o",
+    "swift-dependencies": "/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/master.swiftdeps"
+  },
+  "/Users/dino/Code/fundament/swift/FundamentShim/Sources/FundamentShim/Shim.swift": {
+    "object": "/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/Shim.swift.o",
+    "swiftmodule": "/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/Shim~partial.swiftmodule",
+    "swift-dependencies": "/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/Shim.swiftdeps",
+    "diagnostics": "/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/Shim.dia"
+  }
+}

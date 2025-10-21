@@ -1,0 +1,66 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "FundamentShim-arm64-apple-macosx26.0-release.dylib": ["<FundamentShim-arm64-apple-macosx26.0-release.dylib>"]
+  "FundamentShim-arm64-apple-macosx26.0-release.module": ["<FundamentShim-arm64-apple-macosx26.0-release.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<FundamentShim-arm64-apple-macosx26.0-release.dylib>","<FundamentShim-arm64-apple-macosx26.0-release.module>"]
+  "test": ["<FundamentShim-arm64-apple-macosx26.0-release.dylib>","<FundamentShim-arm64-apple-macosx26.0-release.module>"]
+default: "main"
+nodes:
+  "/Users/dino/Code/fundament/swift/FundamentShim/Sources/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/dino/Code/fundament/swift/FundamentShim/Sources/FundamentShim/Shim.swift"]
+    outputs: ["/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/sources"]
+    description: "Write auxiliary file /Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/sources"
+
+  "/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/Shim.swift.o"]
+    outputs: ["/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.product/Objects.LinkFileList"
+
+  "/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+
+  "<FundamentShim-arm64-apple-macosx26.0-release.dylib>":
+    tool: phony
+    inputs: ["/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/libFundamentShim.dylib"]
+    outputs: ["<FundamentShim-arm64-apple-macosx26.0-release.dylib>"]
+
+  "<FundamentShim-arm64-apple-macosx26.0-release.module>":
+    tool: phony
+    inputs: ["/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/Shim.swift.o","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/Modules/FundamentShim.swiftmodule"]
+    outputs: ["<FundamentShim-arm64-apple-macosx26.0-release.module>"]
+
+  "C.FundamentShim-arm64-apple-macosx26.0-release.dylib":
+    tool: shell
+    inputs: ["/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/Shim.swift.o","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.product/Objects.LinkFileList"]
+    outputs: ["/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/libFundamentShim.dylib"]
+    description: "Linking ./.build/arm64-apple-macosx/release/libFundamentShim.dylib"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-L","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release","-o","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/libFundamentShim.dylib","-module-name","FundamentShim","-Xlinker","-no_warn_duplicate_libraries","-emit-library","-Xlinker","-install_name","-Xlinker","@rpath/libFundamentShim.dylib","-Xlinker","-dead_strip","-Xlinker","-rpath","-Xlinker","@loader_path","@/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.product/Objects.LinkFileList","-enable-experimental-feature","StrictConcurrency","-target","arm64-apple-macosx14.0","-framework","Foundation","-framework","FoundationModels","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g"]
+
+  "C.FundamentShim-arm64-apple-macosx26.0-release.module":
+    tool: shell
+    inputs: ["/Users/dino/Code/fundament/swift/FundamentShim/Sources/FundamentShim/Shim.swift","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/sources"]
+    outputs: ["/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/Shim.swift.o","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/Modules/FundamentShim.swiftmodule"]
+    description: "Compiling Swift Module 'FundamentShim' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","FundamentShim","-emit-dependencies","-emit-module","-emit-module-path","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/Modules/FundamentShim.swiftmodule","-output-file-map","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/output-file-map.json","-parse-as-library","-whole-module-optimization","-num-threads","14","-c","@/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/sources","-I","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/Modules","-target","arm64-apple-macosx14.0","-whole-module-optimization","-num-threads","14","-serialize-diagnostics","-O","-j14","-DSWIFT_PACKAGE","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/include/FundamentShim-Swift.h","-color-diagnostics","-swift-version","5","-DFUNDAMENT_SHIM","-enable-experimental-feature","StrictConcurrency","-enable-upcoming-feature","ConciseMagicFile","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","fundamentshim"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/dino/Code/fundament/swift/FundamentShim/Sources/","/Users/dino/Code/fundament/swift/FundamentShim/Package.swift","/Users/dino/Code/fundament/swift/FundamentShim/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+
