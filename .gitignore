@@ -1,0 +1,32 @@
+# Go
+bin/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+vendor/
+*.test
+*.out
+/debug
+/dist
+
+# Swift
+.build/
+.swiftpm/
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+*.swiftpm/
+.DS_Store
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+*.swp
+*.swo
+*~
+.vscode/
