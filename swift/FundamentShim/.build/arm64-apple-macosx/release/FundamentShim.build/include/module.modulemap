@@ -1,3 +1,0 @@
-module FundamentShim {
-    header "/Users/dino/Code/fundament/swift/FundamentShim/.build/arm64-apple-macosx/release/FundamentShim.build/include/FundamentShim-Swift.h"
-}
