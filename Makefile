@@ -2,7 +2,7 @@ SWIFT_SHIM_DIR := swift/FundamentShim
 SWIFT_MODULE_CACHE := $(CURDIR)/.swift-module-cache
 SWIFT_BUILD_CACHE := $(CURDIR)/.swift-build-cache
 
-.PHONY: all swift swift-debug go examples clean
+.PHONY: all swift swift-debug go examples test integration clean
 
 all: swift go
 
@@ -24,6 +24,12 @@ swift-debug:
 
 go:
 	go build ./...
+
+test:
+	go test ./...
+
+integration:
+	go test -tags integration ./... -timeout 5m
 
 examples: swift
 	go build ./examples/simple

@@ -4,18 +4,17 @@ Go bindings for Apple’s on-device `SystemLanguageModel` (macOS 26). The libr
 
 > ⚠️ **Requirements**: macOS 26 (Sequoia) with Apple Intelligence entitlement enabled, Xcode 16 or newer (or matching Command Line Tools), Go 1.25+ with `CGO_ENABLED=1`.
 
-## Install & Build
+## Getting Started
 
-Clone the repo and build the Swift shim and Go packages:
+Install the Go module:
 
 ```bash
-git clone https://github.com/domano/fundament.git
-cd fundament
-make swift   # builds libFundamentShim.dylib
-make go      # builds fundament and examples
+go get github.com/domano/fundament
 ```
 
-`make swift` writes `libFundamentShim.dylib` into `swift/FundamentShim/.build/Release` and embeds an `rpath` so Go binaries find the shim at runtime. If you run binaries outside the repo, export `DYLD_LIBRARY_PATH=swift/FundamentShim/.build/Release` first.
+The repository ships a prebuilt Swift shim at `swift/FundamentShim/prebuilt/libFundamentShim.dylib`, so downstream users do not need to compile Swift as long as they run on a compatible macOS 26 system. When you package your binary, copy that dylib alongside it (or set `DYLD_LIBRARY_PATH=swift/FundamentShim/prebuilt`) so the dynamic loader can find the bridge.
+
+If you fork the project and touch the Swift sources, run `make swift` and copy the rebuilt dylib from `.build/Release` back into `swift/FundamentShim/prebuilt/` before rebuilding Go.
 
 ## Quick Start
 
@@ -42,17 +41,6 @@ fmt.Println(resp.Text)
 ```
 
 Before you start a session, call `fundament.CheckAvailability()` to ensure the on-device model is ready. The helper returns detailed reasons (device not eligible, Apple Intelligence disabled, model still downloading, etc.) so your app can degrade gracefully.
-
-## Use in Your Project
-
-Pull the module into your app, then build the Swift shim so the cgo bindings can link against it:
-
-```bash
-go get github.com/domano/fundament
-make swift  # run inside the module checkout (or vendor the shim artefact)
-```
-
-At runtime the Go binary must be able to locate `libFundamentShim.dylib`. Running inside the repo works out of the box thanks to the embedded `rpath`. If you ship the binary elsewhere, bundle the dylib alongside it or export `DYLD_LIBRARY_PATH=swift/FundamentShim/.build/Release` before launch.
 
 ## Examples
 
@@ -177,7 +165,7 @@ See the source files (`session.go`, `schema.go`, `options.go`, `availability.go`
 ## Troubleshooting
 
 - **Unavailable model**: `fundament.CheckAvailability()` returns `AvailabilityUnavailable` with a reason (device not eligible, Apple Intelligence disabled, model not ready). Handle this before prompting.
-- **Linker can’t find the shim**: double-check `make swift` succeeded and that your `DYLD_LIBRARY_PATH` includes `swift/FundamentShim/.build/Release` when executing binaries.
+- **Linker can’t find the shim**: make sure `swift/FundamentShim/prebuilt/libFundamentShim.dylib` ships with your binary (or that `DYLD_LIBRARY_PATH` includes that directory) and, if you rebuilt the shim yourself, confirm the prebuilt copy is up to date.
 - **Structured schema errors**: the current translator supports objects, arrays, enums, and primitive fields. Unsupported shapes (references, numeric guides) return descriptive errors from the shim.
 
 For deeper operational guidance, read [`docs/GettingStarted.md`](docs/GettingStarted.md) and the context notes under [`context/`](context/README.md).

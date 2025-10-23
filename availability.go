@@ -6,6 +6,8 @@ import (
 	"github.com/domano/fundament/internal/native"
 )
 
+var nativeCheckAvailability = native.CheckAvailability
+
 // AvailabilityState indicates whether the on-device model is ready to serve.
 type AvailabilityState int
 
@@ -45,7 +47,7 @@ func (a Availability) String() string {
 
 // CheckAvailability queries the Swift shim for the current availability status.
 func CheckAvailability() (Availability, error) {
-	meta, err := native.CheckAvailability()
+	meta, err := nativeCheckAvailability()
 	if err != nil {
 		return Availability{}, err
 	}

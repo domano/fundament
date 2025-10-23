@@ -5,6 +5,7 @@ dist/
 *.dll
 *.so
 *.dylib
+!swift/FundamentShim/prebuilt/libFundamentShim.dylib
 vendor/
 *.test
 *.out

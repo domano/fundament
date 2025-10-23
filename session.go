@@ -11,6 +11,15 @@ import (
 	"github.com/domano/fundament/internal/native"
 )
 
+// Hooks around the native bindings so tests can stub behaviour without cgo.
+var (
+	nativeSessionCreate            = native.SessionCreate
+	nativeSessionDestroy           = native.SessionDestroy
+	nativeSessionRespond           = native.SessionRespond
+	nativeSessionRespondStructured = native.SessionRespondStructured
+	nativeSessionStream            = native.SessionStream
+)
+
 // SessionOptions configure how a Session is created.
 type SessionOptions struct {
 	Instructions string
@@ -27,7 +36,7 @@ type Session struct {
 
 // NewSession creates a new LanguageModelSession bound to the default SystemLanguageModel.
 func NewSession(opts SessionOptions) (*Session, error) {
-	ref, err := native.SessionCreate(opts.Instructions)
+	ref, err := nativeSessionCreate(opts.Instructions)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +59,7 @@ func (s *Session) Close() error {
 	s.closed = true
 	s.mu.Unlock()
 	if ref != nil {
-		native.SessionDestroy(ref)
+		nativeSessionDestroy(ref)
 	}
 	return nil
 }
@@ -81,7 +90,7 @@ func (s *Session) Respond(ctx context.Context, prompt string, opts ...Generation
 	if s.closed || s.ref == nil {
 		return Response{}, errors.New("fundament: session has been closed")
 	}
-	text, err := native.SessionRespond(s.ref, prompt, blob)
+	text, err := nativeSessionRespond(s.ref, prompt, blob)
 	if err != nil {
 		return Response{}, err
 	}
@@ -107,7 +116,7 @@ func (s *Session) RespondStructured(ctx context.Context, prompt string, schema S
 	if s.closed || s.ref == nil {
 		return StructuredResponse{}, errors.New("fundament: session has been closed")
 	}
-	text, err := native.SessionRespondStructured(s.ref, prompt, string(schema.raw), blob)
+	text, err := nativeSessionRespondStructured(s.ref, prompt, string(schema.raw), blob)
 	if err != nil {
 		return StructuredResponse{}, err
 	}
@@ -153,7 +162,7 @@ func (s *Session) RespondStream(ctx context.Context, prompt string, opts ...Gene
 		}
 		ref := s.ref
 		s.mu.RUnlock()
-		err := native.SessionStream(ref, prompt, blob, func(chunk string, final bool) {
+		err := nativeSessionStream(ref, prompt, blob, func(chunk string, final bool) {
 			select {
 			case <-ctx.Done():
 				return

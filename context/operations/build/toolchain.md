@@ -28,6 +28,11 @@
    ```
    This compiles `examples/simple`, `examples/structured`, and `examples/streaming`.
 
+## Testing
+
+- Run `make test` (or `go test ./...`) for unit coverage.  
+- On macOS 26 hardware with Apple Intelligence enabled, run `make integration` (which sets the `integration` build tag) to exercise the live Swift bridge against `SystemLanguageModel`. Integration failures usually indicate entitlement, availability, or ABI drift—fix the root cause rather than skipping the tests.
+
 ## Environment tips
 
 - When running binaries, ensure `DYLD_LIBRARY_PATH` includes `swift/FundamentShim/.build/Release` so the dynamic loader can find `libFundamentShim.dylib`.  

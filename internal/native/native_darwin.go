@@ -4,7 +4,7 @@ package native
 
 /*
 #cgo CFLAGS: -I${SRCDIR}/../../include
-#cgo LDFLAGS: -L${SRCDIR}/../../swift/FundamentShim/.build/Release -Wl,-rpath,${SRCDIR}/../../swift/FundamentShim/.build/Release -lFundamentShim -framework Foundation -framework FoundationModels
+#cgo LDFLAGS: -L${SRCDIR}/../../swift/FundamentShim/prebuilt -L${SRCDIR}/../../swift/FundamentShim/.build/Release -Wl,-rpath,${SRCDIR}/../../swift/FundamentShim/prebuilt -Wl,-rpath,${SRCDIR}/../../swift/FundamentShim/.build/Release -lFundamentShim -framework Foundation -framework FoundationModels
 #include "fundament.h"
 #include <stdlib.h>
 extern void goFundamentStreamCallback(char *chunk, _Bool final, void *userdata);
@@ -12,7 +12,7 @@ extern void goFundamentStreamCallback(char *chunk, _Bool final, void *userdata);
 import "C"
 import (
 	"errors"
-	"sync"
+	"runtime/cgo"
 	"unsafe"
 )
 
@@ -102,8 +102,8 @@ func SessionStream(ref SessionRef, prompt, optionsJSON string, cb StreamCallback
 	cOptions := toCString(optionsJSON)
 	defer freeCString(cOptions)
 
-	handle := registerStreamCallback(cb)
-	defer releaseStreamCallback(handle)
+	handle := cgo.NewHandle(cb)
+	defer handle.Delete()
 
 	var cErr C.fundament_error
 	ok := C.fundament_session_stream(C.fundament_session_ref(ref), cPrompt, cOptions, C.fundament_stream_cb(C.goFundamentStreamCallback), unsafe.Pointer(handle), &cErr)
@@ -179,45 +179,21 @@ func takeError(err *C.fundament_error) error {
 
 //export goFundamentStreamCallback
 func goFundamentStreamCallback(cChunk *C.char, final C.bool, userData unsafe.Pointer) {
-	handle := (*streamHandle)(userData)
-	if handle == nil {
+	if userData == nil {
+		return
+	}
+	handle := cgo.Handle(uintptr(userData))
+	value := handle.Value()
+	if value == nil {
+		return
+	}
+	callback, ok := value.(StreamCallback)
+	if !ok {
 		return
 	}
 	chunk := ""
 	if cChunk != nil {
 		chunk = C.GoString(cChunk)
 	}
-	handle.invoke(chunk, bool(final))
-}
-
-type streamHandle struct {
-	callback StreamCallback
-}
-
-var (
-	streamCallbacks sync.Map
-)
-
-func registerStreamCallback(cb StreamCallback) *streamHandle {
-	handle := &streamHandle{
-		callback: cb,
-	}
-	streamCallbacks.Store(handle, struct{}{})
-	return handle
-}
-
-func releaseStreamCallback(handle *streamHandle) {
-	if handle == nil {
-		return
-	}
-	streamCallbacks.Delete(handle)
-}
-
-func (h *streamHandle) invoke(chunk string, final bool) {
-	if h.callback != nil {
-		h.callback(chunk, final)
-	}
-	if final {
-		releaseStreamCallback(h)
-	}
+	callback(chunk, bool(final))
 }

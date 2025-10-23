@@ -17,7 +17,10 @@ Always read the relevant Tier‑2 page and any linked Tier‑3 notes before edit
 
 - **Target platform:** macOS 26 with Apple Intelligence entitlement enabled.  
 - Run `make swift` to build the Swift shim, then `make go` (or `go build ./...`) for Go components.  
-- Binaries need `DYLD_LIBRARY_PATH` pointing at `swift/FundamentShim/.build/Release`.
+- After modifying anything under `swift/FundamentShim/`, rebuild the shim and copy `swift/FundamentShim/.build/Release/libFundamentShim.dylib` into `swift/FundamentShim/prebuilt/` so the committed artefact stays current.  
+- Run `make test` (or `go test ./...`) to execute the Go unit tests before you ship changes.  
+- On macOS 26 hardware with Apple Intelligence, run `make integration` (enables the `integration` build tag) to exercise the live Swift bridge; fix environment issues instead of skipping these checks.  
+- Binaries need `DYLD_LIBRARY_PATH` pointing at `swift/FundamentShim/prebuilt`.
 
 See [`context/operations/build/toolchain.md`](context/operations/build/toolchain.md) for precise commands and troubleshooting tips.
 
@@ -35,8 +38,10 @@ When making significant changes, update the appropriate Markdown in `context/` o
 
 Before handing off work:
 
-1. `make swift` (or `swift build …`) succeeds without new errors.  
+1. `make swift` (or `swift build …`) succeeds without new errors, and the refreshed `swift/FundamentShim/prebuilt/libFundamentShim.dylib` is committed if Swift sources changed.  
 2. `go build ./...` succeeds.  
-3. Any new behaviour is documented in `context/` if it affects architecture, operations, or decisions.
+3. `go test ./...` (or `make test`) succeeds. If tests fail because of intended behaviour changes, update the tests alongside the code—never delete or comment them out just to bypass a failure.  
+4. `make integration` succeeds on an entitled macOS 26 machine. The target enables the `integration` build tag—address availability or entitlement issues rather than suppressing the integration tests.  
+5. Any new behaviour is documented in `context/` if it affects architecture, operations, or decisions.
 
 Thanks for contributing responsibly!
