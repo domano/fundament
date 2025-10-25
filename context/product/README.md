@@ -1,6 +1,6 @@
 # Product Overview
 
-Fundament exposes the macOS 26 `SystemLanguageModel` Foundation API to Go applications via a Swift shim and cgo bindings.
+Fundament exposes the macOS 26 `SystemLanguageModel` Foundation API to Go applications via a Swift shim, loaded at runtime through pure Go (`purego`) bindings.
 
 Key resources:
 

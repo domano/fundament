@@ -2,7 +2,9 @@
 
 ## Scope and Targets
 
-- Deliver a pure Go package (module `github.com/domano/fundament`) that exposes ergonomic APIs for the on-device `SystemLanguageModel` introduced in macOS Sequoia (a.k.a. macOS 15 / “macOS 26”) via cgo-backed Swift interop.
+> **Update (runtime loader)**: The current implementation embeds the Swift shim and loads it via [`purego`](https://github.com/ebitengine/purego), so references to cgo/linker flags below reflect the original exploration notes.
+
+- Deliver a pure Go package (module `github.com/domano/fundament`) that exposes ergonomic APIs for the on-device `SystemLanguageModel` introduced in macOS Sequoia (a.k.a. macOS 15 / “macOS 26”) via a Swift shim.
 - Provide runnable examples demonstrating:
   - Single-turn prompt/response.
   - Structured output generation with `@Generable` schemas.
@@ -127,4 +129,3 @@
 2. Implement minimal end-to-end `Respond` call to validate architecture.
 3. Iterate on advanced features (structured, streaming) once plumbing is stable.
 4. Flesh out documentation, examples, and release tooling.
-

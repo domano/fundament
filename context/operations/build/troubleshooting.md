@@ -10,10 +10,11 @@
 - The shim checks `SystemLanguageModel` availability; on unsupported hardware or macOS versions < 26 it returns a structured error.  
 - Verify the machine is Apple Intelligence–eligible and logged into the correct Apple ID with the entitlement enabled.
 
-## Go linker cannot find `libFundamentShim.dylib`
+## Shim extraction or loading failures
 
-- Confirm you ran `make swift` before `go build`.  
-- The cgo linker flags include `-Wl,-rpath`; if binaries are executed from another directory, set `DYLD_LIBRARY_PATH` manually.
+- Confirm you ran `make swift` so `internal/shimloader/prebuilt/libFundamentShim.dylib` matches the manifest hash.  
+- Clear the cache directory (`rm -rf ~/Library/Caches/fundament-shim`) and rerun the binary to force re-extraction.  
+- Hardened/notarized apps may need access to `codesign` for ad-hoc signing; ensure Xcode Command Line Tools are installed.
 
 ## Structured generation inaccuracies
 

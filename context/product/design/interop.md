@@ -8,9 +8,9 @@
 
 ## C ABI surface
 
-- All Swift exports use `_cdecl` with pointer-based parameters so they can be imported via cgo.  
+- All Swift exports use `_cdecl` with pointer-based parameters so they can be consumed from Go through `purego` symbol registration.  
 - Response buffers are written into `fundament_buffer` out-parameters; Go callers must call `fundament_buffer_free` when done.  
-- Streaming uses callback pointers (`fundament_stream_cb`) and relays text chunks back to Go.
+- Streaming uses callback pointers (`fundament_stream_cb`) delivered via `purego.NewCallback`, relaying text chunks back to Go.
 
 ## Memory ownership
 

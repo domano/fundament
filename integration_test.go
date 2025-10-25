@@ -1,4 +1,4 @@
-//go:build integration && darwin && cgo
+//go:build integration && darwin
 
 package fundament
 

@@ -17,10 +17,10 @@ Always read the relevant Tier‑2 page and any linked Tier‑3 notes before edit
 
 - **Target platform:** macOS 26 with Apple Intelligence entitlement enabled.  
 - Run `make swift` to build the Swift shim, then `make go` (or `go build ./...`) for Go components.  
-- After modifying anything under `swift/FundamentShim/`, rebuild the shim and copy `swift/FundamentShim/.build/Release/libFundamentShim.dylib` into `swift/FundamentShim/prebuilt/` so the committed artefact stays current.  
+- After modifying anything under `swift/FundamentShim/`, run `make swift`; it rebuilds the shim and updates `internal/shimloader/prebuilt/libFundamentShim.dylib` plus its manifest so the embedded artefact stays current.  
 - Run `make test` (or `go test ./...`) to execute the Go unit tests before you ship changes.  
 - On macOS 26 hardware with Apple Intelligence, run `make integration` (enables the `integration` build tag) to exercise the live Swift bridge; fix environment issues instead of skipping these checks.  
-- Binaries need `DYLD_LIBRARY_PATH` pointing at `swift/FundamentShim/prebuilt`.
+- Importing the Go module is enough—the shim is embedded and extracted on demand. Built binaries cache the dylib under the user cache directory; no rpath or environment tweaks are required.
 
 See [`context/operations/build/toolchain.md`](context/operations/build/toolchain.md) for precise commands and troubleshooting tips.
 
@@ -38,7 +38,7 @@ When making significant changes, update the appropriate Markdown in `context/` o
 
 Before handing off work:
 
-1. `make swift` (or `swift build …`) succeeds without new errors, and the refreshed `swift/FundamentShim/prebuilt/libFundamentShim.dylib` is committed if Swift sources changed.  
+1. `make swift` (or `swift build …`) succeeds without new errors, and the refreshed `internal/shimloader/prebuilt/libFundamentShim.dylib` plus `manifest.json` are committed if Swift sources changed.  
 2. `go build ./...` succeeds.  
 3. `go test ./...` (or `make test`) succeeds. If tests fail because of intended behaviour changes, update the tests alongside the code—never delete or comment them out just to bypass a failure.  
 4. `make integration` succeeds on an entitled macOS 26 machine. The target enables the `integration` build tag—address availability or entitlement issues rather than suppressing the integration tests.  

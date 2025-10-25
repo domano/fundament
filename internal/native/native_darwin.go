@@ -1,19 +1,16 @@
-//go:build darwin && cgo
+//go:build darwin
 
 package native
 
-/*
-#cgo CFLAGS: -I${SRCDIR}/../../include
-#cgo LDFLAGS: -L${SRCDIR}/../../swift/FundamentShim/prebuilt -L${SRCDIR}/../../swift/FundamentShim/.build/Release -Wl,-rpath,${SRCDIR}/../../swift/FundamentShim/prebuilt -Wl,-rpath,${SRCDIR}/../../swift/FundamentShim/.build/Release -lFundamentShim -framework Foundation -framework FoundationModels
-#include "fundament.h"
-#include <stdlib.h>
-extern void goFundamentStreamCallback(char *chunk, _Bool final, void *userdata);
-*/
-import "C"
 import (
 	"errors"
-	"runtime/cgo"
+	"fmt"
+	"sync"
 	"unsafe"
+
+	"github.com/ebitengine/purego"
+
+	"github.com/domano/fundament/internal/shimloader"
 )
 
 type SessionRef unsafe.Pointer
@@ -25,175 +22,276 @@ type Availability struct {
 
 type StreamCallback func(chunk string, final bool)
 
-func SessionCreate(instructions string) (SessionRef, error) {
-	cInstructions := toCString(instructions)
-	defer freeCString(cInstructions)
+type cError struct {
+	Code    int32
+	_       int32
+	Message *byte
+}
 
-	var cErr C.fundament_error
-	ref := C.fundament_session_create(cInstructions, &cErr)
-	err := takeError(&cErr)
+type cBuffer struct {
+	Data   *byte
+	Length int64
+}
+
+type cAvailability struct {
+	State  int32
+	Reason int32
+}
+
+type cString struct {
+	ptr *byte
+	buf []byte
+}
+
+func newCString(s string) cString {
+	b := append([]byte(s), 0)
+	return cString{
+		ptr: &b[0],
+		buf: b,
+	}
+}
+
+func (c cString) ptrOrNil() *byte {
+	return c.ptr
+}
+
+type fundamentStreamCallback = uintptr
+
+var (
+	registerOnce sync.Once
+	registerErr  error
+
+	fnSessionCreate            func(*byte, *cError) SessionRef
+	fnSessionDestroy           func(SessionRef)
+	fnSessionRespond           func(SessionRef, *byte, *byte, *cBuffer, *cError) bool
+	fnSessionRespondStructured func(SessionRef, *byte, *byte, *byte, *cBuffer, *cError) bool
+	fnSessionStream            func(SessionRef, *byte, *byte, fundamentStreamCallback, unsafe.Pointer, *cError) bool
+	fnSessionCheckAvailability func(*cAvailability, *cError) bool
+	fnBufferFree               func(unsafe.Pointer)
+	fnErrorFree                func(unsafe.Pointer)
+
+	streamCallbackPtr fundamentStreamCallback
+	streamHandles     sync.Map // map[unsafe.Pointer]*streamHandle
+)
+
+type streamHandle struct {
+	callback StreamCallback
+}
+
+func init() {
+	if err := shimloader.Initialize(); err != nil {
+		panic(fmt.Sprintf("fundament: shim initialization failed: %v", err))
+	}
+	registerOnce.Do(func() {
+		registerErr = registerFunctions()
+	})
+	if registerErr != nil {
+		panic(fmt.Sprintf("fundament: shim symbol registration failed: %v", registerErr))
+	}
+}
+
+func registerFunctions() error {
+	if err := shimloader.Register("fundament_session_create", &fnSessionCreate); err != nil {
+		return err
+	}
+	if err := shimloader.Register("fundament_session_destroy", &fnSessionDestroy); err != nil {
+		return err
+	}
+	if err := shimloader.Register("fundament_session_respond", &fnSessionRespond); err != nil {
+		return err
+	}
+	if err := shimloader.Register("fundament_session_respond_structured", &fnSessionRespondStructured); err != nil {
+		return err
+	}
+	if err := shimloader.Register("fundament_session_stream", &fnSessionStream); err != nil {
+		return err
+	}
+	if err := shimloader.Register("fundament_session_check_availability", &fnSessionCheckAvailability); err != nil {
+		return err
+	}
+	if err := shimloader.Register("fundament_buffer_free", &fnBufferFree); err != nil {
+		return err
+	}
+	if err := shimloader.Register("fundament_error_free", &fnErrorFree); err != nil {
+		return err
+	}
+
+	streamCallbackPtr = purego.NewCallback(goFundamentStreamCallback)
+	return nil
+}
+
+func SessionCreate(instructions string) (SessionRef, error) {
+	cInstructions := newCString(instructions)
+
+	var cerr cError
+	ref := fnSessionCreate(cInstructions.ptrOrNil(), &cerr)
+	if err := takeError(&cerr); err != nil {
+		return nil, err
+	}
 	if ref == nil {
-		if err == nil {
-			err = errors.New("fundament: session create failed without details")
-		}
-		return nil, err
+		return nil, errors.New("fundament: session create failed without details")
 	}
-	if err != nil {
-		return nil, err
-	}
-	return SessionRef(ref), nil
+	return ref, nil
 }
 
 func SessionDestroy(ref SessionRef) {
-	C.fundament_session_destroy(C.fundament_session_ref(ref))
+	fnSessionDestroy(ref)
 }
 
 func SessionRespond(ref SessionRef, prompt string, optionsJSON string) (string, error) {
-	cPrompt := toCString(prompt)
-	defer freeCString(cPrompt)
-	cOptions := toCString(optionsJSON)
-	defer freeCString(cOptions)
+	cPrompt := newCString(prompt)
+	cOptions := newCString(optionsJSON)
 
-	var cBuffer C.fundament_buffer
-	var cErr C.fundament_error
-	ok := C.fundament_session_respond(C.fundament_session_ref(ref), cPrompt, cOptions, &cBuffer, &cErr)
-	err := takeError(&cErr)
-	if !ok {
-		if err != nil {
-			return "", err
-		}
-		return "", errors.New("fundament: respond failed without details")
-	}
-	if err != nil {
+	var buf cBuffer
+	var cerr cError
+	ok := fnSessionRespond(ref, cPrompt.ptrOrNil(), cOptions.ptrOrNil(), &buf, &cerr)
+	if err := takeError(&cerr); err != nil {
 		return "", err
 	}
-	defer C.fundament_buffer_free(unsafe.Pointer(&cBuffer))
-	return fromBuffer(cBuffer), nil
+	if !ok {
+		return "", errors.New("fundament: respond failed without details")
+	}
+	if fnBufferFree != nil {
+		defer fnBufferFree(unsafe.Pointer(&buf))
+	}
+	return fromBuffer(&buf), nil
 }
 
 func SessionRespondStructured(ref SessionRef, prompt, schemaJSON, optionsJSON string) (string, error) {
-	cPrompt := toCString(prompt)
-	defer freeCString(cPrompt)
-	cSchema := toCString(schemaJSON)
-	defer freeCString(cSchema)
-	cOptions := toCString(optionsJSON)
-	defer freeCString(cOptions)
+	cPrompt := newCString(prompt)
+	cSchema := newCString(schemaJSON)
+	cOptions := newCString(optionsJSON)
 
-	var cBuffer C.fundament_buffer
-	var cErr C.fundament_error
-	ok := C.fundament_session_respond_structured(C.fundament_session_ref(ref), cPrompt, cSchema, cOptions, &cBuffer, &cErr)
-	err := takeError(&cErr)
-	if !ok {
-		if err != nil {
-			return "", err
-		}
-		return "", errors.New("fundament: structured respond failed without details")
-	}
-	if err != nil {
+	var buf cBuffer
+	var cerr cError
+	ok := fnSessionRespondStructured(ref, cPrompt.ptrOrNil(), cSchema.ptrOrNil(), cOptions.ptrOrNil(), &buf, &cerr)
+	if err := takeError(&cerr); err != nil {
 		return "", err
 	}
-	defer C.fundament_buffer_free(unsafe.Pointer(&cBuffer))
-	return fromBuffer(cBuffer), nil
+	if !ok {
+		return "", errors.New("fundament: structured respond failed without details")
+	}
+	if fnBufferFree != nil {
+		defer fnBufferFree(unsafe.Pointer(&buf))
+	}
+	return fromBuffer(&buf), nil
 }
 
 func SessionStream(ref SessionRef, prompt, optionsJSON string, cb StreamCallback) error {
-	cPrompt := toCString(prompt)
-	defer freeCString(cPrompt)
-	cOptions := toCString(optionsJSON)
-	defer freeCString(cOptions)
+	if cb == nil {
+		return errors.New("fundament: stream callback must not be nil")
+	}
+	cPrompt := newCString(prompt)
+	cOptions := newCString(optionsJSON)
 
-	handle := cgo.NewHandle(cb)
-	defer handle.Delete()
-
-	var cErr C.fundament_error
-	ok := C.fundament_session_stream(C.fundament_session_ref(ref), cPrompt, cOptions, C.fundament_stream_cb(C.goFundamentStreamCallback), unsafe.Pointer(handle), &cErr)
-	err := takeError(&cErr)
+	handlePtr := storeStreamCallback(cb)
+	var cerr cError
+	ok := fnSessionStream(ref, cPrompt.ptrOrNil(), cOptions.ptrOrNil(), streamCallbackPtr, handlePtr, &cerr)
+	if err := takeError(&cerr); err != nil {
+		releaseStreamCallback(handlePtr)
+		return err
+	}
 	if !ok {
-		if err != nil {
-			return err
-		}
+		releaseStreamCallback(handlePtr)
 		return errors.New("fundament: streaming failed without details")
 	}
-	return err
+	return nil
 }
 
 func CheckAvailability() (Availability, error) {
-	var cAvailability C.fundament_availability
-	var cErr C.fundament_error
-	ok := C.fundament_session_check_availability(&cAvailability, &cErr)
-	err := takeError(&cErr)
-	if !ok {
-		if err != nil {
-			return Availability{}, err
-		}
-		return Availability{}, errors.New("fundament: availability check failed without details")
-	}
-	if err != nil {
+	var cav cAvailability
+	var cerr cError
+	ok := fnSessionCheckAvailability(&cav, &cerr)
+	if err := takeError(&cerr); err != nil {
 		return Availability{}, err
 	}
+	if !ok {
+		return Availability{}, errors.New("fundament: availability check failed without details")
+	}
 	return Availability{
-		State:  int32(cAvailability.state),
-		Reason: int32(cAvailability.reason),
+		State:  cav.State,
+		Reason: cav.Reason,
 	}, nil
 }
 
-// Helpers
-
-func toCString(v string) *C.char {
-	if v == "" {
-		return C.CString("")
-	}
-	return C.CString(v)
+func storeStreamCallback(cb StreamCallback) unsafe.Pointer {
+	handle := &streamHandle{callback: cb}
+	ptr := unsafe.Pointer(handle)
+	streamHandles.Store(ptr, handle)
+	return ptr
 }
 
-func freeCString(ptr *C.char) {
-	if ptr != nil {
-		C.free(unsafe.Pointer(ptr))
+func releaseStreamCallback(ptr unsafe.Pointer) {
+	streamHandles.Delete(ptr)
+}
+
+func goFundamentStreamCallback(chunk *byte, isFinal bool, userdata unsafe.Pointer) {
+	value, ok := streamHandles.Load(userdata)
+	if !ok {
+		return
+	}
+	sh, _ := value.(*streamHandle)
+	if sh == nil || sh.callback == nil {
+		return
+	}
+	text := cStringValue(chunk)
+	sh.callback(text, isFinal)
+	if isFinal {
+		releaseStreamCallback(userdata)
 	}
 }
 
-func fromBuffer(buffer C.fundament_buffer) string {
-	if buffer.data == nil || buffer.length == 0 {
-		return ""
-	}
-	return C.GoStringN(buffer.data, C.int(buffer.length))
-}
-
-func takeError(err *C.fundament_error) error {
+func takeError(err *cError) error {
 	if err == nil {
 		return nil
 	}
-	defer C.fundament_error_free(unsafe.Pointer(err))
-	if err.code == 0 && err.message == nil {
+	if fnErrorFree != nil {
+		defer fnErrorFree(unsafe.Pointer(err))
+	}
+	if err.Code == 0 && err.Message == nil {
 		return nil
 	}
-	message := ""
-	if err.message != nil {
-		message = C.GoString(err.message)
-	}
+	message := cStringValue(err.Message)
 	if message == "" {
 		message = "fundament: unknown error"
 	}
 	return errors.New(message)
 }
 
-//export goFundamentStreamCallback
-func goFundamentStreamCallback(cChunk *C.char, final C.bool, userData unsafe.Pointer) {
-	if userData == nil {
-		return
+func fromBuffer(buf *cBuffer) string {
+	if buf == nil || buf.Data == nil || buf.Length <= 0 {
+		return ""
 	}
-	handle := cgo.Handle(uintptr(userData))
-	value := handle.Value()
-	if value == nil {
-		return
+	length := int(buf.Length)
+	data := unsafe.Slice(buf.Data, length)
+	out := make([]byte, length)
+	copy(out, data)
+	return string(out)
+}
+
+func cStringValue(ptr *byte) string {
+	if ptr == nil {
+		return ""
 	}
-	callback, ok := value.(StreamCallback)
-	if !ok {
-		return
+	length := cStringLen(ptr)
+	if length == 0 {
+		return ""
 	}
-	chunk := ""
-	if cChunk != nil {
-		chunk = C.GoString(cChunk)
+	data := unsafe.Slice(ptr, length)
+	return string(data)
+}
+
+func cStringLen(ptr *byte) int {
+	if ptr == nil {
+		return 0
 	}
-	callback(chunk, bool(final))
+	var n int
+	for {
+		b := *(*byte)(unsafe.Add(unsafe.Pointer(ptr), uintptr(n)))
+		if b == 0 {
+			break
+		}
+		n++
+	}
+	return n
 }

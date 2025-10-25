@@ -13,6 +13,7 @@ swift:
 	CLANG_MODULE_CACHE_PATH=$(SWIFT_MODULE_CACHE) \
 	SWIFT_MODULECACHE_PATH=$(SWIFT_MODULE_CACHE) \
 	swift build --package-path $(SWIFT_SHIM_DIR) -c release --cache-path $(SWIFT_BUILD_CACHE) --disable-sandbox
+	./scripts/package_shim.sh
 
 swift-debug:
 	mkdir -p $(SWIFT_MODULE_CACHE) $(SWIFT_BUILD_CACHE)

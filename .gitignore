@@ -5,12 +5,16 @@ dist/
 *.dll
 *.so
 *.dylib
-!swift/FundamentShim/prebuilt/libFundamentShim.dylib
+!internal/shimloader/prebuilt/libFundamentShim.dylib
 vendor/
 *.test
 *.out
 /debug
 /dist
+.gocache/
+.gomodcache/
+.swift-build-cache/
+.swift-module-cache/
 
 # Swift
 .build/

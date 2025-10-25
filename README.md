@@ -12,9 +12,11 @@ Install the Go module:
 go get github.com/domano/fundament
 ```
 
-The repository ships a prebuilt Swift shim at `swift/FundamentShim/prebuilt/libFundamentShim.dylib`, so downstream users do not need to compile Swift as long as they run on a compatible macOS 26 system. When you package your binary, copy that dylib alongside it (or set `DYLD_LIBRARY_PATH=swift/FundamentShim/prebuilt`) so the dynamic loader can find the bridge.
+Read [`MIGRATION.md`](MIGRATION.md) for notes on the embedded, pure Go loader.
 
-If you fork the project and touch the Swift sources, run `make swift` and copy the rebuilt dylib from `.build/Release` back into `swift/FundamentShim/prebuilt/` before rebuilding Go.
+The repository embeds a prebuilt Swift shim at build time (see `internal/shimloader/prebuilt/libFundamentShim.dylib`), so downstream users do not need to compile Swift or manage dynamic library paths. When your program starts, the shim is extracted to your user cache (`~/Library/Caches/fundament-shim/<sha>/`) and loaded automatically.
+
+If you fork the project and touch the Swift sources, run `make swift`; it rebuilds the shim and refreshes `internal/shimloader/prebuilt/libFundamentShim.dylib` plus its manifest. Nothing else is required for consumers—no rpaths, no manual copies, and cgo can remain disabled.
 
 ## Quick Start
 
@@ -165,7 +167,7 @@ See the source files (`session.go`, `schema.go`, `options.go`, `availability.go`
 ## Troubleshooting
 
 - **Unavailable model**: `fundament.CheckAvailability()` returns `AvailabilityUnavailable` with a reason (device not eligible, Apple Intelligence disabled, model not ready). Handle this before prompting.
-- **Linker can’t find the shim**: make sure `swift/FundamentShim/prebuilt/libFundamentShim.dylib` ships with your binary (or that `DYLD_LIBRARY_PATH` includes that directory) and, if you rebuilt the shim yourself, confirm the prebuilt copy is up to date.
+- **Shim loading issues**: remove `~/Library/Caches/fundament-shim` (or `$XDG_CACHE_HOME/fundament-shim`) and rerun; if the error persists, re-run `make swift` so `internal/shimloader/prebuilt/libFundamentShim.dylib` and its manifest match the embedded hash.
 - **Structured schema errors**: the current translator supports objects, arrays, enums, and primitive fields. Unsupported shapes (references, numeric guides) return descriptive errors from the shim.
 
 For deeper operational guidance, read [`docs/GettingStarted.md`](docs/GettingStarted.md) and the context notes under [`context/`](context/README.md).

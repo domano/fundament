@@ -8,15 +8,15 @@ Fundament is composed of three layers that mirror the native Apple Foundation Mo
    - Converts async Swift calls into synchronous entry points using `performSync`, ensuring Go can call the APIs serially.
 
 2. **Native Bridge (`internal/native`)**  
-   - cgo wrappers that marshal Go strings/options into the Swift shim and translate errors back into `error` values.  
-   - Adds an `rpath` to locate `libFundamentShim.dylib` from the Release build artifact and frees Swift-allocated buffers.
+   - Pure Go wrappers (via [`purego`](https://github.com/ebitengine/purego)) that marshal Go strings/options into the Swift shim and translate errors back into `error` values.  
+   - Loads `libFundamentShim.dylib` at runtime, extracts it from the embedded payload, manages callbacks, and frees Swift-allocated buffers.
 
 3. **Public Go API (`session.go`, `options.go`, `schema.go`, `availability.go`)**  
    - Provides idiomatic types such as `Session`, `GenerationOption`, and `Schema`.  
    - Supports single-turn responses, schema-guided generation, streaming via channels, and availability introspection.
 
 ```text
-Go caller → fundament.Session → internal/native (cgo) → Swift shim → FoundationModels (SystemLanguageModel)
+Go caller → fundament.Session → internal/native (purego) → Swift shim → FoundationModels (SystemLanguageModel)
 ```
 
 Related docs:

@@ -4,7 +4,7 @@
 
 - **macOS 26** with Apple Intelligence entitlement enabled.  
 - **Xcode 16 or newer** (Command Line Tools installed) to provide the `FoundationModels` framework.  
-- **Go 1.25+** with cgo enabled.
+- **Go 1.25+** (cgo optional thanks to embedded shim loading).
 
 ## Build steps
 
@@ -13,7 +13,8 @@
    make swift
    ```
    - Sets `MACOSX_DEPLOYMENT_TARGET=15.0`, disables SwiftPM sandboxing, and writes build products to `swift/FundamentShim/.build/Release`.
-   - Produces `libFundamentShim.dylib`, which Go links against (an `rpath` is embedded via cgo flags).
+   - Produces `libFundamentShim.dylib`, then runs `scripts/package_shim.sh` to refresh `internal/shimloader/prebuilt/libFundamentShim.dylib` and its `manifest.json` (sha, Swift version, SDK metadata).
+   - Committed consumers rely on the embedded copy; no manual steps are required after running `make swift`.
 
 2. **Build Go packages and examples**
    ```bash
@@ -35,7 +36,8 @@
 
 ## Environment tips
 
-- When running binaries, ensure `DYLD_LIBRARY_PATH` includes `swift/FundamentShim/.build/Release` so the dynamic loader can find `libFundamentShim.dylib`.  
+- The Go package embeds the shim and extracts it beneath the user cache directory on first use, so no `DYLD_LIBRARY_PATH` updates are necessary.
+- When distributing your own binaries, nothing extra is required—the executable carries the shim payload. If the cache becomes corrupted, rerun the binary after deleting `~/Library/Caches/fundament-shim`.
 - Clear local caches with `rm -rf .swift-module-cache .swift-build-cache .gocache .gomodcache` after experiments to avoid stale artefacts.
 
 Related docs: [Troubleshooting](troubleshooting.md)
